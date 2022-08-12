@@ -1,7 +1,6 @@
 package bisq.web.ui.easy;
 
 import bisq.application.DefaultApplicationService;
-import bisq.chat.ChatService;
 import bisq.chat.channel.Channel;
 import bisq.chat.message.ChatMessage;
 import bisq.chat.message.PublicChatMessage;
@@ -73,7 +72,7 @@ public class BisqEasyView extends HorizontalLayout {
 
         // combo channel select
         tradeChannelBox = UIUtils.create(new ComboBox<>(), channelColumn::add, "tradeChannelBox");
-        tradeChannelBox.setItems(publicTradeChannelService().getChannels());
+        tradeChannelBox.setItems(BisqContext.get().getPublicTradeChannelService().getChannels());
         tradeChannelBox.setItemLabelGenerator(PublicTradeChannel::getDisplayString);
         tradeChannelBox.addValueChangeListener(ev -> {
             if (ev.isFromClient()) {
@@ -132,23 +131,18 @@ public class BisqEasyView extends HorizontalLayout {
     private void send() {
         String text = enterField.getValue();
         if (text != null && !text.isEmpty()) {
-            Channel<? extends ChatMessage> channel = chatService().getTradeChannelSelectionService().getSelectedChannel().get(); // TODO what about multiple window surfing???
-            UserIdentity userIdentity = BisqContext.get().getApplicationService().getUserService().getUserIdentityService().getSelectedUserProfile().get();
+            Channel<? extends ChatMessage> channel = BisqContext.get().getTradeChannelSelectionService().getSelectedChannel().get(); // TODO what about multiple window surfing???
+            UserIdentity userIdentity = BisqContext.get().getUserIdentityService().getSelectedUserProfile().get();
 //            checkNotNull(userIdentity, "chatUserIdentity must not be null at onSendMessage");
 //            Optional<Quotation> quotation = quotedMessageBlock.getQuotation();
             if (channel instanceof PublicTradeChannel) {
 //                String dontShowAgainId = "sendMsgOfferOnlyWarn";
                 SettingsService settingsService = BisqContext.get().getApplicationService().getSettingsService();
                 if (settingsService.getOffersOnly().get()) {
-//                    new Popup().information(Res.get("social.chat.sendMsg.offerOnly.popup"))
-//                            .actionButtonText(Res.get("yes"))
-//                            .onAction(() ->
                     settingsService.setOffersOnly(false);
-//                            .closeButtonText(Res.get("no"))
-//                            .dontShowAgainId(dontShowAgainId)
-//                            .show();
+
                 }
-                chatService().getPublicTradeChannelService().publishChatMessage(text, Optional.empty(), (PublicTradeChannel) channel, userIdentity);
+                BisqContext.get().getChatService().getPublicTradeChannelService().publishChatMessage(text, Optional.empty(), (PublicTradeChannel) channel, userIdentity);
             }
         }
         enterField.setValue(enterField.getEmptyValue());
@@ -197,27 +191,19 @@ public class BisqEasyView extends HorizontalLayout {
             if (selectedChannelPin != null) {
                 selectedChannelPin.unbind();
             }
-            publicTradeChannelService().hidePublicTradeChannel(ch);
-            publicTradeChannelService().persist();
+            BisqContext.get().getPublicTradeChannelService().hidePublicTradeChannel(ch);
+            BisqContext.get().getPublicTradeChannelService().persist();
             loadListTradeChannels();
             tradeChannelBox.setVisible(false);
             chatGrid.setItems(Collections.emptyList());
         });
     }
 
-    protected ChatService chatService() {
-        return BisqContext.get().getApplicationService().getChatService();
-    }
-
-    protected PublicTradeChannelService publicTradeChannelService() {
-        return BisqContext.get().getApplicationService().getChatService().getPublicTradeChannelService();
-    }
-
     private void boxSelection() {
         tradeChannelBox.getOptionalValue().ifPresent(ch -> {
             // add channel and select
-            chatService().getPublicTradeChannelService().showChannel(ch);
-            chatService().getPublicTradeChannelService().persist();
+            BisqContext.get().getChatService().getPublicTradeChannelService().showChannel(ch);
+            BisqContext.get().getChatService().getPublicTradeChannelService().persist();
             loadListTradeChannels();
             listTradeChannels.setValue(ch);
         });
@@ -226,8 +212,8 @@ public class BisqEasyView extends HorizontalLayout {
     }
 
     private void loadListTradeChannels() {
-        listTradeChannels.setItems(publicTradeChannelService().getChannels().stream()//
-                .filter(publicTradeChannelService()::isVisible) //
+        listTradeChannels.setItems(BisqContext.get().getPublicTradeChannelService().getChannels().stream()//
+                .filter(BisqContext.get().getPublicTradeChannelService()::isVisible) //
                 .collect(Collectors.toList()));
     }
 
