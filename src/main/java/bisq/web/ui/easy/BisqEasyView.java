@@ -24,6 +24,7 @@ import com.vaadin.flow.component.listbox.ListBox;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.TextField;
+import com.vaadin.flow.data.provider.ListDataProvider;
 import com.vaadin.flow.data.renderer.ComponentRenderer;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.router.RouteAlias;
@@ -89,7 +90,11 @@ public class BisqEasyView extends HorizontalLayout implements IBisqEasyView {
         listTradeChannels = UIUtils.create(new ListBox<>(), channelColumn::add, "listTradeChannels");
         listTradeChannels.setItemLabelGenerator(Channel::getDisplayString);
         listTradeChannels.setItems(presenter.activeChannelProvider());
-        listTradeChannels.addValueChangeListener(ev -> presenter.selectChannel(ev.getValue()));
+        listTradeChannels.addValueChangeListener(ev -> {
+            if (ev.isFromClient()) {
+                presenter.selectChannel(ev.getValue());
+            }
+        });
 
         Hr divider = new Hr();
         channelColumn.add(divider);
@@ -113,7 +118,11 @@ public class BisqEasyView extends HorizontalLayout implements IBisqEasyView {
 
         chatGrid = UIUtils.create(new Grid(), chatColumn::add, "chatGrid");
         chatGrid.addColumn(new ComponentRenderer<Div, ChatMessage>(this::chatComponent));
-        chatGrid.setItems(presenter.loadChatMessageProvider());
+        ListDataProvider<ChatMessage> chatMessageProvider = presenter.chatMessageProvider();
+        chatGrid.setItems(chatMessageProvider);
+        chatMessageProvider.addDataProviderListener(ev -> {
+            chatGrid.scrollToEnd(); // scroll down to display latest message
+        });
         chatGrid.addThemeVariants(GridVariant.LUMO_NO_BORDER, GridVariant.LUMO_NO_ROW_BORDERS);
 
         HorizontalLayout messageLayout = UIUtils.create(new HorizontalLayout(), chatColumn::add, "messageLayout");
@@ -151,7 +160,11 @@ public class BisqEasyView extends HorizontalLayout implements IBisqEasyView {
 
     @Override
     public void stateChanged() {
-        presenter.getSelectedChannel().ifPresent(ch -> channelLabel.setText(ch.getDisplayString()));
+        channelLabel.setText(presenter.getSelectedChannel().map(Channel::getDisplayString).orElse(""));
+        listTradeChannels.setValue(presenter.getSelectedChannel().orElse(listTradeChannels.getEmptyValue()));
+        if (!presenter.getSelectedChannel().isPresent()) {
+            enterField.setValue(enterField.getEmptyValue());
+        }
     }
 
     private void hideChannel() {
